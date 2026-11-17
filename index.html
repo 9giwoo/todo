@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3451d1">
+  <meta name="description" content="업무와 개인 할 일을 나눠 관리하고 구글 캘린더와 함께 보는 앱">
+  <title>내 할 일</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="mode-work">
+  <div id="app">
+    <header class="top" id="top" hidden>
+      <div class="mode-switch" role="group" aria-label="업무와 개인 전환">
+        <button data-mode="work" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"/></svg>
+          업무
+        </button>
+        <button data-mode="personal" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>
+          개인
+        </button>
+      </div>
+      <div class="titles">
+        <h1 id="title">내 업무</h1>
+        <span id="subtitle"></span>
+      </div>
+      <nav class="view-switch" aria-label="보기 전환">
+        <button data-view="list">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+          <span>목록</span>
+        </button>
+        <button data-view="calendar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <span>캘린더</span>
+        </button>
+      </nav>
+      <div class="top-icons">
+        <span id="net" class="net" hidden>오프라인</span>
+        <button class="icon-btn" data-act="settings" aria-label="설정" title="설정">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+        </button>
+      </div>
+    </header>
+    <main id="main"><div class="boot">불러오는 중…</div></main>
+  </div>
+  <div id="overlay" hidden></div>
+  <div id="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
