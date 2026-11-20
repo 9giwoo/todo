@@ -301,12 +301,14 @@ function rowHTML(t, { showDate = true } = {}) {
   const subDone = subs.filter((s) => s.done).length;
   let dateTxt = D.fmtRelative(t.doDate, td);
   if (late) dateTxt = `${D.fmtShort(t.doDate)} · ${D.diffDays(t.doDate, td)}일 지남`;
-  const cls = ['row', high ? 'high' : '', late ? 'late' : '', t.done ? 'done' : '', sel ? 'sel' : ''].join(' ');
+  const doing = t.status === 'doing' && !t.done;
+  const cls = ['row', high ? 'high' : '', late ? 'late' : '', doing ? 'doing' : '', t.done ? 'done' : '', sel ? 'sel' : ''].join(' ');
   return `<div class="${cls}">
     <input type="checkbox" class="chk" data-act="toggle" data-id="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료">
     <button class="row-main" data-act="open" data-id="${t.id}">
       ${chipsHTML(t)}
       ${timeLabel(t) ? `<span class="tchip ${slotOf(t)}">${esc(timeLabel(t))}</span>` : ''}
+      ${doing ? '<span class="badge-doing"><i></i>진행 중</span>' : ''}
       <span class="row-title">${esc(t.title)}</span>
       ${high ? '<span class="badge-high">높음</span>' : ''}
       ${isRepeating(t.repeat) ? `<span class="meta rep" title="반복">↻ ${esc(ruleText(t.repeat, (seriesById(t.seriesId) || {}).anchorDate || t.doDate))}</span>` : ''}
@@ -491,7 +493,9 @@ function taskChip(t, day) {
   const high = t.priority === 'high' && !t.done;
   const top = [timeLabel(t), isRepeating(t.repeat) ? '↻' : '', t.space === 'personal' ? t.category : [t.brand, t.media].filter(Boolean).join(' · '), late ? '밀림' : '', high ? '높음' : ''].filter(Boolean).join(' · ');
   const due = t.dueDate && t.dueDate !== day ? `마감 ${D.md(t.dueDate)}${t.dueTime ? ' ' + t.dueTime : ''}` : (t.dueTime ? `마감 ${t.dueTime}` : '');
-  return `<button class="ci task ${late ? 'late' : ''} ${high ? 'high' : ''} ${t.done ? 'done' : ''}" data-act="open" data-id="${t.id}">
+  const doing = t.status === 'doing' && !t.done;
+  return `<button class="ci task ${late ? 'late' : ''} ${high ? 'high' : ''} ${doing ? 'doing' : ''} ${t.done ? 'done' : ''}" data-act="open" data-id="${t.id}">
+    ${doing ? '<span class="ci-doing"><i></i>진행 중</span>' : ''}
     ${top ? `<span class="ci-top">${esc(top)}</span>` : ''}
     <span class="ci-title">${esc(t.title)}</span>
     ${due ? `<span class="ci-sub">${esc(due)}</span>` : ''}
@@ -543,6 +547,7 @@ function calendarHTML() {
     const t = b.t;
     const late = isOverdue(t, td);
     const high = t.priority === 'high' && !t.done;
+    const doing = t.status === 'doing' && !t.done;
     const subs = t.subtasks || [];
     const cat = t.space === 'personal' ? t.category : [t.brand, t.media].filter(Boolean).join(' · ');
     const due = t.dueDate && t.dueDate !== sel ? `마감 ${D.md(t.dueDate)}${t.dueTime ? ' ' + t.dueTime : ''}` : (t.dueTime ? `마감 ${t.dueTime}` : '');
@@ -553,11 +558,11 @@ function calendarHTML() {
       subs.length ? `<span>☑ ${subs.filter((x) => x.done).length}/${subs.length}</span>` : '',
       t.result ? '<span>★ 성과</span>' : '',
     ].filter(Boolean).join('<i class="dot">·</i>');
-    return `<div class="dpi task ${t.done ? 'done' : ''} ${high ? 'high' : ''} ${late ? 'late' : ''}">
+    return `<div class="dpi task ${t.done ? 'done' : ''} ${high ? 'high' : ''} ${late ? 'late' : ''} ${doing ? 'doing' : ''}">
       <div class="dpi-time ${slotOf(t)}">${esc(timeLabel(t) || '—')}</div>
       <input type="checkbox" class="chk" data-act="toggle" data-id="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료">
       <button class="dpi-body" data-act="open" data-id="${t.id}">
-        <span class="dpi-title">${high ? '<span class="dpi-tag high">높음</span>' : ''}${late ? '<span class="dpi-tag late">밀림</span>' : ''}${esc(t.title)}</span>
+        <span class="dpi-title">${doing ? '<span class="dpi-tag doing"><i></i>진행 중</span>' : ''}${high ? '<span class="dpi-tag high">높음</span>' : ''}${late ? '<span class="dpi-tag late">밀림</span>' : ''}${esc(t.title)}</span>
         ${meta ? `<span class="dpi-meta">${meta}</span>` : ''}
       </button>
     </div>`;
