@@ -405,3 +405,15 @@ div.dpi-body { cursor: default; }
 .dp-done-toggle { display: flex; justify-content: space-between; width: 100%; margin-top: 12px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
 .dp-done-toggle span { font-weight: 500; color: var(--muted); }
 .dp-done-list { margin-top: 4px; }
+
+/* ---------- 진행 중 표시 ---------- */
+@keyframes doing-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.badge-doing, .ci-doing, .dpi-tag.doing { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); padding: 1px 7px 1px 6px; border-radius: 99px; white-space: nowrap; flex: none; }
+.badge-doing i, .ci-doing i, .dpi-tag.doing i { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: doing-pulse 1.6s ease-in-out infinite; }
+.row.doing { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 10px; background: var(--accent-soft); margin: 2px 0; }
+.ci.task.doing { outline: 2px solid var(--accent); outline-offset: -2px; background: #fff; }
+.ci-doing { margin-bottom: 3px; font-size: 10.5px; padding: 0 6px 0 5px; }
+.dpi.doing { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-soft); }
+.dpi.doing.high { background: var(--accent-soft); }
+.dpi-tag.doing { margin-right: 6px; vertical-align: 1px; }
+@media (prefers-reduced-motion: reduce) { .badge-doing i, .ci-doing i, .dpi-tag.doing i { animation: none; } }
