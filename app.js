@@ -670,6 +670,7 @@ function monthHTML(td) {
 
 /* ---------- 오버레이(상세·설정) ---------- */
 function renderOverlay() {
+  syncBack();
   const ov = $('#overlay');
   const o = state.overlay;
   if (!o) { ov.hidden = true; ov.innerHTML = ''; document.body.classList.remove('ov-open'); return; }
@@ -981,6 +982,23 @@ document.addEventListener('submit', async (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && state.overlay) closeOverlay();
+});
+
+/* 안드로이드 뒤로가기: 바로 꺼지지 않게
+   - 상세/설정 창이 열려 있으면 창만 닫기
+   - 첫 화면에서는 "한 번 더 누르면 닫혀요" 안내 후, 한 번 더 누르면 종료
+   (크롬은 화면을 만진 뒤에 넣은 기록만 뒤로가기로 인정해서, 터치·클릭 순간에 기록을 넣음) */
+const HS = () => history.state || {};
+const armBack = () => { if (!HS().todoGuard && !HS().todoOverlay) history.pushState({ todoGuard: true }, ''); };
+['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, armBack, true));
+function syncBack() {
+  if (state.overlay && !HS().todoOverlay) history.pushState({ todoOverlay: true }, '');
+  else if (!state.overlay && HS().todoOverlay) history.back();
+}
+window.addEventListener('popstate', () => {
+  if (HS().todoOverlay) return;
+  if (state.overlay) { closeOverlay(); return; }
+  if (!HS().todoGuard) toast('뒤로 버튼을 한 번 더 누르면 앱이 닫혀요');
 });
 
 window.addEventListener('resize', () => {
