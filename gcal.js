@@ -113,9 +113,11 @@ export function createGcal({ clientId, demo }) {
     async events(mode, from, to) {
       if (demo) return { events: demoEvents(mode, from, to) };
       const key = `gcal_ev_${mode}_${from}_${to}`;
-      const cached = LS.get(key, null);
+      const saved = LS.get(key, null);
+      const cached = Array.isArray(saved) ? saved : (saved && saved.events) || null;
+      const savedAt = (saved && !Array.isArray(saved) && saved.at) || 0;
       if (!tokens[mode]) return { events: [], none: true };
-      if (!valid(mode)) return { events: cached || [], needAuth: true };
+      if (!valid(mode)) return { events: cached || [], needAuth: true, savedAt };
       const tk = tokens[mode].token;
       try {
         if (!calCache[mode]) {
@@ -128,11 +130,11 @@ export function createGcal({ clientId, demo }) {
           .then((j) => (j.items || []).filter((e) => e.status !== 'cancelled' && e.start && includesMe(e)).map((e) => normalize(e, c)))
           .catch((e) => { if (e.expired) throw e; return []; })));
         const events = lists.flat().sort((a, b) => (a.start + a.time).localeCompare(b.start + b.time));
-        LS.set(key, events);
+        LS.set(key, { events, at: Date.now() });
         return { events };
       } catch (e) {
-        if (e.expired) { tokens[mode].exp = 0; LS.set('gcal_tokens', tokens); return { events: cached || [], needAuth: true }; }
-        return { events: cached || [], error: e.message };
+        if (e.expired) { tokens[mode].exp = 0; LS.set('gcal_tokens', tokens); return { events: cached || [], needAuth: true, savedAt }; }
+        return { events: cached || [], error: e.message, savedAt };
       }
     },
   };
