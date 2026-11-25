@@ -417,3 +417,16 @@ div.dpi-body { cursor: default; }
 .dpi.doing.high { background: var(--accent-soft); }
 .dpi-tag.doing { margin-right: 6px; vertical-align: 1px; }
 @media (prefers-reduced-motion: reduce) { .badge-doing i, .ci-doing i, .dpi-tag.doing i { animation: none; } }
+
+/* ---------- 내일로 미루기 · 캘린더 새로고침 안내 ---------- */
+.push-btn { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
+.push-btn:hover { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); }
+.dpi { grid-template-columns: 46px 22px minmax(0, 1fr) auto; }
+.dpi .push-btn { align-self: start; margin-top: 1px; }
+.dpi.done .push-btn { display: none; }
+.d-move { margin: -2px 0 12px; }
+.d-move .btn { font-size: 13px; }
+.d-move .muted { font-weight: 500; margin-left: 4px; }
+.cal-stale { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--late-soft); color: var(--late-ink); font-size: 13px; line-height: 1.45; }
+.cal-stale b { font-weight: 700; }
+@media (max-width: 640px) { .row .push-btn { padding: 3px 7px; font-size: 11px; } }
