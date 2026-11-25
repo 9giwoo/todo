@@ -74,6 +74,9 @@ const byId = (id) => state.tasks.find((t) => t.id === id);
 const seriesById = (id) => state.series.find((s) => s.id === id);
 const listOf = (key) => (Array.isArray(state.settings[key]) ? state.settings[key] : []);
 const isOverdue = (t, td = D.today()) => !t.done && t.doDate < td;
+const hhmm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+// 오늘·지난 할 일은 내일로, 앞으로 할 일은 하루 뒤로
+const pushTarget = (t, td = D.today()) => (t.doDate <= td ? D.addDays(td, 1) : D.addDays(t.doDate, 1));
 // 할 시간 · 오전/오후: 시간이 있으면 시간 기준, 없으면 오전/오후 표시 기준
 const SEC_ORDER = { any: 0, am: 1, pm: 2 };
 const slotOf = (x) => (x.doTime ? (x.doTime < '12:00' ? 'am' : 'pm') : (x.slot || ''));
@@ -316,6 +319,7 @@ function rowHTML(t, { showDate = true } = {}) {
       ${subs.length ? `<span class="meta">☑ ${subDone}/${subs.length}</span>` : ''}
       ${showDate ? `<span class="row-date ${late ? 'late' : t.doDate === td ? 'today' : ''}">${esc(dateTxt)}</span>` : ''}
     </button>
+    ${!t.done && t.doDate <= td ? `<button class="push-btn" data-act="push" data-id="${t.id}" title="할 날짜를 내일로 옮기기" aria-label="${esc(t.title)} 내일로 미루기">내일로 ›</button>` : ''}
   </div>`;
 }
 
@@ -400,6 +404,7 @@ function detailHTML(t) {
       <div class="pills">${[['am', '오전'], ['pm', '오후']].map(([v, l]) => `<button class="pill slot-${v} ${slotOf(t) === v ? 'on' : ''}" data-act="slot" data-v="${v}" aria-pressed="${slotOf(t) === v}">${l}</button>`).join('')}</div>
     </div>
     ${late ? `<p class="warn">할 날짜가 ${D.diffDays(t.doDate, td)}일 지났어요. 완료하거나 날짜를 옮겨 주세요.</p>` : ''}
+    ${!t.done ? `<div class="d-move"><button class="btn ghost" data-act="push" data-id="${t.id}">${t.doDate <= td ? '내일로 미루기' : '하루 미루기'} <span class="muted">→ ${esc(D.fmtShort(pushTarget(t)))}</span></button></div>` : ''}
     <div class="f"><span>반복</span>
       <div class="pills">${REPEAT_TYPES.map(([v, l]) => `<button class="pill ${rule.type === v ? 'on' : ''}" data-act="repeat" data-v="${v}" aria-pressed="${rule.type === v}">${l}</button>`).join('')}</div>
       ${rule.type === 'weekly' ? `<div class="wdays">${D.WD.map((w, i) => `<button class="wdb ${rule.days.includes(i) ? 'on' : ''}" data-act="wday" data-v="${i}" aria-pressed="${rule.days.includes(i)}" aria-label="${w}요일">${w}</button>`).join('')}</div>` : ''}
@@ -450,7 +455,7 @@ async function loadEvents() {
   store.setSince(from < D.addDays(D.today(), -45) ? from : D.addDays(D.today(), -45));
   const r = await gcal.events(mode, from, to);
   state.events[mode] = r.events || [];
-  state.evInfo[mode] = { needAuth: !!r.needAuth, none: !!r.none, error: r.error || '' };
+  state.evInfo[mode] = { needAuth: !!r.needAuth, none: !!r.none, error: r.error || '', savedAt: r.savedAt || 0 };
   if (state.view === 'calendar' && state.mode === mode) renderMain();
 }
 
@@ -515,6 +520,9 @@ function calendarHTML() {
   let calCtl = '';
   if (st === 'none') calCtl = `<button class="btn small ghost" data-act="gcal-connect">${calName} 연결</button>`;
   else if (info.needAuth || st === 'expired') calCtl = `<button class="btn small ghost" data-act="gcal-connect" title="${esc(gcal.email(state.mode))}">↻ ${calName} 새로고침</button>`;
+  const stale = st !== 'none' && (info.needAuth || st === 'expired');
+  const savedTxt = info.savedAt ? (D.ymd(new Date(info.savedAt)) === td ? `오늘 ${hhmm(info.savedAt)}` : `${D.fmtShort(D.ymd(new Date(info.savedAt)))} ${hhmm(info.savedAt)}`) : '예전';
+  const staleHTML = stale ? `<div class="cal-stale" role="status"><span><b>${calName} 연결이 끊겨서 ${esc(savedTxt)} 기준 일정을 보여주고 있어요.</b> 구글 캘린더에서 바꾼 내용은 다시 불러와야 보여요.</span><button class="btn small primary" data-act="gcal-connect">지금 다시 불러오기</button></div>` : '';
   const body = state.calView === 'week' ? weekHTML(td) : monthHTML(td);
   const sel = state.selDay;
   const { blocks, tasks: dTasks, events: dEvents } = dayBlocks(sel);
@@ -565,6 +573,7 @@ function calendarHTML() {
         <span class="dpi-title">${doing ? '<span class="dpi-tag doing"><i></i>진행 중</span>' : ''}${high ? '<span class="dpi-tag high">높음</span>' : ''}${late ? '<span class="dpi-tag late">밀림</span>' : ''}${esc(t.title)}</span>
         ${meta ? `<span class="dpi-meta">${meta}</span>` : ''}
       </button>
+      ${!t.done && t.doDate <= td ? `<button class="push-btn" data-act="push" data-id="${t.id}" title="할 날짜를 내일로 옮기기" aria-label="${esc(t.title)} 내일로 미루기">내일로 ›</button>` : ''}
     </div>`;
   };
   const dpStack = (list) => {
@@ -611,6 +620,7 @@ function calendarHTML() {
         ${calCtl}
         ${info.error ? `<span class="muted small">캘린더 오류: ${esc(info.error)}</span>` : ''}
       </div>
+      ${staleHTML}
       ${body}
     </section>
     <aside class="card day-panel" aria-label="선택한 날짜">
@@ -752,6 +762,14 @@ document.addEventListener('click', async (e) => {
     case 'close': if (state.overlay) closeOverlay(); else { state.selected[state.mode] = null; renderMain(); } break;
     case 'toggle': e.preventDefault(); toggleDone(el.dataset.id); break;
     case 'open': openTask(el.dataset.id); break;
+    case 'push': {
+      const pt = byId(el.dataset.id); if (!pt || pt.done) break;
+      const to = pushTarget(pt);
+      saveTask(pt.id, { doDate: to });
+      refreshDetail(true);
+      toast(`${D.fmtShort(to)}로 미뤘어요`);
+      break;
+    }
     case 'dp-done': state.showDayDone = !state.showDayDone; renderMain(); break;
     case 'toggle-done': state.showDone = !state.showDone; renderMain(); break;
 
