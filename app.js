@@ -104,7 +104,7 @@ async function init() {
     state.user = user;
     if (user) {
       store.watch({
-        onTasks: (list) => { state.tasks = list; state.loaded.tasks = true; afterData(); },
+        onTasks: (list) => { state.tasks = withPending(list); state.loaded.tasks = true; afterData(); },
         onSeries: (list) => { state.series = list; state.loaded.series = true; afterData(); scheduleGenerate(); },
         onSettings: (s) => { state.settings = s || {}; render(); },
         onChecks: (list) => { state.checks = new Map(list.map((c) => [c.id, c])); if (state.view === 'calendar') renderMain(); },
@@ -152,6 +152,23 @@ async function generate() {
 }
 
 /* ---------------- 저장 ---------------- */
+// 서버 확인 전까지 내가 바꾼 값을 따로 들고 있다가, 실시간 구독 결과 위에 덮어씁니다.
+// (두 구독 중 한쪽만 먼저 오거나 기기 저장소가 늦어도 예전 값으로 잠깐 되돌아가지 않게)
+const pending = new Map(); // id → { patch, ver } · patch가 null이면 삭제 대기
+function hold(id, patch, write) {
+  const cur = pending.get(id) || { patch: {}, ver: 0 };
+  cur.patch = patch === null || cur.patch === null ? patch : { ...cur.patch, ...patch };
+  cur.ver += 1; pending.set(id, cur);
+  const ver = cur.ver;
+  const release = () => { const c = pending.get(id); if (c && c.ver === ver) pending.delete(id); };
+  Promise.resolve(write).then(release, (e) => { release(); fail(e); });
+}
+const withPending = (list) => (pending.size ? list
+  .filter((t) => !(pending.has(t.id) && pending.get(t.id).patch === null))
+  .map((t) => (pending.has(t.id) ? Object.assign(t, pending.get(t.id).patch) : t)) : list);
+const writeTask = (id, patch) => hold(id, patch, store.updateTask(id, patch));
+const removeTask = (id) => hold(id, null, store.deleteTask(id));
+
 function applyLocal(id, patch) {
   const t = byId(id);
   if (t) Object.assign(t, patch);
@@ -161,7 +178,7 @@ function applyLocal(id, patch) {
 function saveTask(id, patch, { quiet } = {}) {
   const t = applyLocal(id, patch);
   if (!quiet) renderMain();
-  Promise.resolve(store.updateTask(id, patch)).catch(fail);
+  writeTask(id, patch);
   // 반복 업무면 다음 회차부터도 같은 내용이 적용되도록 템플릿 갱신
   if (t && t.seriesId && Object.keys(patch).some((k) => TEMPLATE_FIELDS.includes(k) || k === 'subtasks' || k === 'dueDate')) {
     const s = seriesById(t.seriesId);
@@ -172,7 +189,7 @@ function saveTask(id, patch, { quiet } = {}) {
     if (patch.subtasks) fp.subtasks = patch.subtasks.map((x) => ({ text: x.text, done: false }));
     if (Object.keys(fp).length) {
       state.tasks.filter((x) => x.seriesId === t.seriesId && x.id !== t.id && !x.done && x.doDate > t.doDate)
-        .forEach((x) => { Object.assign(x, fp); Promise.resolve(store.updateTask(x.id, fp)).catch(fail); });
+        .forEach((x) => { Object.assign(x, fp); writeTask(x.id, fp); });
     }
   }
 }
@@ -207,7 +224,7 @@ function toggleDone(id) {
 function deleteFuture(seriesId, exceptId) {
   const td = D.today();
   state.tasks.filter((x) => x.seriesId === seriesId && !x.done && x.doDate > td && x.id !== exceptId)
-    .forEach((x) => { Promise.resolve(store.deleteTask(x.id)).catch(fail); });
+    .forEach((x) => { removeTask(x.id); });
 }
 
 async function setRepeat(id, rule) {
@@ -789,7 +806,7 @@ document.addEventListener('click', async (e) => {
       state.confirmDelete = null;
       state.tasks = state.tasks.filter((x) => x.id !== t.id);
       state.selected[t.space] = null;
-      Promise.resolve(store.deleteTask(t.id)).catch(fail);
+      removeTask(t.id);
       if (state.overlay) closeOverlay();
       renderMain(); toast('삭제했어요');
     } break;

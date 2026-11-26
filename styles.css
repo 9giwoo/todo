@@ -430,3 +430,8 @@ div.dpi-body { cursor: default; }
 .cal-stale { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--late-soft); color: var(--late-ink); font-size: 13px; line-height: 1.45; }
 .cal-stale b { font-weight: 700; }
 @media (max-width: 640px) { .row .push-btn { padding: 3px 7px; font-size: 11px; } }
+
+/* 폰에서 '내일로' 버튼을 누르기 쉽게: 보이는 크기는 그대로, 누르는 범위만 넓힘 */
+.push-btn { position: relative; touch-action: manipulation; }
+.push-btn::after { content: ''; position: absolute; inset: -10px -6px; }
+@media (hover: none) { .push-btn:hover { color: var(--muted); border-color: var(--line); background: var(--surface); } .push-btn:active { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); } }

@@ -1,6 +1,6 @@
 // 앱 화면 파일을 저장해 두어 인터넷이 없어도 열리게 합니다. (데이터 동기화는 Firebase가 따로 처리)
 // 앱 파일을 고쳐서 다시 올릴 때는 아래 버전 숫자를 올려 주세요.
-const CACHE = 'todo-app-v7';
+const CACHE = 'todo-app-v8';
 const SHELL = ['./', 'index.html', 'styles.css', 'config.js', 'manifest.webmanifest',
   'app.js', 'dates.js', 'recur.js', 'gcal.js', 'store-local.js', 'store-firebase.js',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
