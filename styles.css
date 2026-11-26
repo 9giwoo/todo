@@ -435,3 +435,11 @@ div.dpi-body { cursor: default; }
 .push-btn { position: relative; touch-action: manipulation; }
 .push-btn::after { content: ''; position: absolute; inset: -10px -6px; }
 @media (hover: none) { .push-btn:hover { color: var(--muted); border-color: var(--line); background: var(--surface); } .push-btn:active { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); } }
+
+/* '대기' 표시: 진행 중처럼 눈에 띄되 깜빡이지 않는 회색 + 점선 테두리 */
+.badge-waiting, .ci-waiting, .dpi-tag.waiting { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #fff; background: #667085; padding: 1px 7px 1px 6px; border-radius: 99px; white-space: nowrap; flex: none; }
+.row.waiting { outline: 2px dashed #98a2b3; outline-offset: -2px; border-radius: 10px; background: #f2f4f7; margin: 2px 0; }
+.ci.task.waiting { outline: 2px dashed #98a2b3; outline-offset: -2px; background: #f2f4f7; }
+.ci-waiting { margin-bottom: 3px; font-size: 10.5px; padding: 0 6px 0 5px; }
+.dpi.waiting, .dpi.waiting.high { outline: 2px dashed #98a2b3; outline-offset: -2px; background: #f2f4f7; }
+.dpi-tag.waiting { margin-right: 6px; vertical-align: 1px; }

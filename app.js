@@ -73,7 +73,9 @@ const modeTasks = () => state.tasks.filter((t) => (t.space || 'work') === state.
 const byId = (id) => state.tasks.find((t) => t.id === id);
 const seriesById = (id) => state.series.find((s) => s.id === id);
 const listOf = (key) => (Array.isArray(state.settings[key]) ? state.settings[key] : []);
-const isOverdue = (t, td = D.today()) => !t.done && t.doDate < td;
+// '대기'인 할 일은 날짜가 지나도 밀린 것으로 보지 않아요
+const isWaiting = (t) => t.status === 'waiting' && !t.done;
+const isOverdue = (t, td = D.today()) => !t.done && t.doDate < td && !isWaiting(t);
 const hhmm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 // 오늘·지난 할 일은 내일로, 앞으로 할 일은 하루 뒤로
 const pushTarget = (t, td = D.today()) => (t.doDate <= td ? D.addDays(td, 1) : D.addDays(t.doDate, 1));
@@ -322,13 +324,15 @@ function rowHTML(t, { showDate = true } = {}) {
   let dateTxt = D.fmtRelative(t.doDate, td);
   if (late) dateTxt = `${D.fmtShort(t.doDate)} · ${D.diffDays(t.doDate, td)}일 지남`;
   const doing = t.status === 'doing' && !t.done;
-  const cls = ['row', high ? 'high' : '', late ? 'late' : '', doing ? 'doing' : '', t.done ? 'done' : '', sel ? 'sel' : ''].join(' ');
+  const waiting = isWaiting(t);
+  const cls = ['row', high ? 'high' : '', late ? 'late' : '', doing ? 'doing' : '', waiting ? 'waiting' : '', t.done ? 'done' : '', sel ? 'sel' : ''].join(' ');
   return `<div class="${cls}">
     <input type="checkbox" class="chk" data-act="toggle" data-id="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료">
     <button class="row-main" data-act="open" data-id="${t.id}">
       ${chipsHTML(t)}
       ${timeLabel(t) ? `<span class="tchip ${slotOf(t)}">${esc(timeLabel(t))}</span>` : ''}
       ${doing ? '<span class="badge-doing"><i></i>진행 중</span>' : ''}
+      ${waiting ? '<span class="badge-waiting">⏸ 대기</span>' : ''}
       <span class="row-title">${esc(t.title)}</span>
       ${high ? '<span class="badge-high">높음</span>' : ''}
       ${isRepeating(t.repeat) ? `<span class="meta rep" title="반복">↻ ${esc(ruleText(t.repeat, (seriesById(t.seriesId) || {}).anchorDate || t.doDate))}</span>` : ''}
@@ -365,7 +369,7 @@ function listHTML() {
   const td = D.today();
   const all = modeTasks();
   const late = all.filter((t) => isOverdue(t, td)).sort((a, b) => a.doDate.localeCompare(b.doDate) || (PRIO_ORDER[a.priority] - PRIO_ORDER[b.priority]));
-  const next = all.filter((t) => !t.done && t.doDate >= td)
+  const next = all.filter((t) => !t.done && !isOverdue(t, td))
     .sort((a, b) => a.doDate.localeCompare(b.doDate) || byTime(a, b) || (PRIO_ORDER[a.priority] - PRIO_ORDER[b.priority]) || (a.createdAt - b.createdAt));
   const done = all.filter((t) => t.done).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).slice(0, 50);
   const noun = MODE[state.mode].noun;
@@ -516,8 +520,10 @@ function taskChip(t, day) {
   const top = [timeLabel(t), isRepeating(t.repeat) ? '↻' : '', t.space === 'personal' ? t.category : [t.brand, t.media].filter(Boolean).join(' · '), late ? '밀림' : '', high ? '높음' : ''].filter(Boolean).join(' · ');
   const due = t.dueDate && t.dueDate !== day ? `마감 ${D.md(t.dueDate)}${t.dueTime ? ' ' + t.dueTime : ''}` : (t.dueTime ? `마감 ${t.dueTime}` : '');
   const doing = t.status === 'doing' && !t.done;
-  return `<button class="ci task ${late ? 'late' : ''} ${high ? 'high' : ''} ${doing ? 'doing' : ''} ${t.done ? 'done' : ''}" data-act="open" data-id="${t.id}">
+  const waiting = isWaiting(t);
+  return `<button class="ci task ${late ? 'late' : ''} ${high ? 'high' : ''} ${doing ? 'doing' : ''} ${waiting ? 'waiting' : ''} ${t.done ? 'done' : ''}" data-act="open" data-id="${t.id}">
     ${doing ? '<span class="ci-doing"><i></i>진행 중</span>' : ''}
+    ${waiting ? '<span class="ci-waiting">⏸ 대기</span>' : ''}
     ${top ? `<span class="ci-top">${esc(top)}</span>` : ''}
     <span class="ci-title">${esc(t.title)}</span>
     ${due ? `<span class="ci-sub">${esc(due)}</span>` : ''}
@@ -573,6 +579,7 @@ function calendarHTML() {
     const late = isOverdue(t, td);
     const high = t.priority === 'high' && !t.done;
     const doing = t.status === 'doing' && !t.done;
+    const waiting = isWaiting(t);
     const subs = t.subtasks || [];
     const cat = t.space === 'personal' ? t.category : [t.brand, t.media].filter(Boolean).join(' · ');
     const due = t.dueDate && t.dueDate !== sel ? `마감 ${D.md(t.dueDate)}${t.dueTime ? ' ' + t.dueTime : ''}` : (t.dueTime ? `마감 ${t.dueTime}` : '');
@@ -583,11 +590,11 @@ function calendarHTML() {
       subs.length ? `<span>☑ ${subs.filter((x) => x.done).length}/${subs.length}</span>` : '',
       t.result ? '<span>★ 성과</span>' : '',
     ].filter(Boolean).join('<i class="dot">·</i>');
-    return `<div class="dpi task ${t.done ? 'done' : ''} ${high ? 'high' : ''} ${late ? 'late' : ''} ${doing ? 'doing' : ''}">
+    return `<div class="dpi task ${t.done ? 'done' : ''} ${high ? 'high' : ''} ${late ? 'late' : ''} ${doing ? 'doing' : ''} ${waiting ? 'waiting' : ''}">
       <div class="dpi-time ${slotOf(t)}">${esc(timeLabel(t) || '—')}</div>
       <input type="checkbox" class="chk" data-act="toggle" data-id="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료">
       <button class="dpi-body" data-act="open" data-id="${t.id}">
-        <span class="dpi-title">${doing ? '<span class="dpi-tag doing"><i></i>진행 중</span>' : ''}${high ? '<span class="dpi-tag high">높음</span>' : ''}${late ? '<span class="dpi-tag late">밀림</span>' : ''}${esc(t.title)}</span>
+        <span class="dpi-title">${doing ? '<span class="dpi-tag doing"><i></i>진행 중</span>' : ''}${waiting ? '<span class="dpi-tag waiting">⏸ 대기</span>' : ''}${high ? '<span class="dpi-tag high">높음</span>' : ''}${late ? '<span class="dpi-tag late">밀림</span>' : ''}${esc(t.title)}</span>
         ${meta ? `<span class="dpi-meta">${meta}</span>` : ''}
       </button>
       ${!t.done && t.doDate <= td ? `<button class="push-btn" data-act="push" data-id="${t.id}" title="할 날짜를 내일로 옮기기" aria-label="${esc(t.title)} 내일로 미루기">내일로 ›</button>` : ''}
